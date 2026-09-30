@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart' as cache;
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -249,7 +249,7 @@ class Store {
   }
 }
 
-final mushafCache = CacheManager(Config('mushafPages',
+final mushafCache = cache.CacheManager(cache.Config('mushafPages',
     stalePeriod: const Duration(days: 3650), maxNrOfCacheObjects: 3000));
 
 ImageProvider pageImg(int p, bool dark) =>
