@@ -5,7 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:timezone/data/latest.dart' as tzd;
 import 'package:timezone/timezone.dart' as tz;
 
-/// تنبيهات الأذان: تجدول مواقيت اليوم واليومين القادمين عند فتح التطبيق.
+/// تنبيهات الأذان والأذكار الدورية
 class Notify {
   static final _p = FlutterLocalNotificationsPlugin();
   static const _names = {
@@ -30,9 +30,32 @@ class Notify {
     } catch (_) {}
   }
 
+  // جدولة إشعارات الأذكار الدورية (كل نص ساعة)
+  static Future<void> scheduleDhikrPeriodic() async {
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'dhikr_channel',
+        'أذكار تذكيرية',
+        channelDescription: 'إشعارات دورية لتذكير بالصلاة على النبي والأذكار',
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      const notificationDetails = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
+
+      // يمكنك جدولة تنبيه دوري أو رسالة تذكيرية
+      await _p.periodicallyShow(
+        999,
+        'رفيق المسلم | تذكير بالأذكار',
+        'اللهم صل وسلم وبارك على نبينا محمد وعلى آله وصحبه أجمعين 🌸',
+        RepeatInterval.halfHourly, // تظهر كل نصف ساعة
+        notificationDetails,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      );
+    } catch (_) {}
+  }
+
   static Future<void> schedule(double lat, double lng) async {
     try {
-      await _p.cancelAll();
       final now = tz.TZDateTime.now(tz.local);
       for (var d = 0; d < 3; d++) {
         final day = now.add(Duration(days: d));
@@ -48,7 +71,7 @@ class Notify {
             await _p.zonedSchedule(
               d * 10 + i,
               'حان وقت صلاة ${e.value}',
-              'حيّ على الصلاة',
+              'حيّ على الصلاة، حيّ على الفلاح',
               when,
               const NotificationDetails(
                   android: AndroidNotificationDetails('adhan', 'مواقيت الصلاة',
