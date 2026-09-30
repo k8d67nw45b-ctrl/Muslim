@@ -5,8 +5,7 @@ import 'package:http/http.dart' as http;
 import 'package:timezone/data/latest.dart' as tzd;
 import 'package:timezone/timezone.dart' as tz;
 
-/// تنبيهات الأذان والأذكار الدورية
-class Notify {
+class AppNotify {
   static final _p = FlutterLocalNotificationsPlugin();
   static const _names = {
     'Fajr': 'الفجر',
@@ -30,24 +29,22 @@ class Notify {
     } catch (_) {}
   }
 
-  // جدولة إشعارات الأذكار الدورية (كل نص ساعة)
   static Future<void> scheduleDhikrPeriodic() async {
     try {
       const androidDetails = AndroidNotificationDetails(
         'dhikr_channel',
         'أذكار تذكيرية',
-        channelDescription: 'إشعارات دورية لتذكير بالصلاة على النبي والأذكار',
+        channelDescription: 'إشعارات دورية للتذكير بالأذكار والصلاة على النبي',
         importance: Importance.high,
         priority: Priority.high,
       );
       const notificationDetails = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
 
-      // يمكنك جدولة تنبيه دوري أو رسالة تذكيرية
       await _p.periodicallyShow(
         999,
         'رفيق المسلم | تذكير بالأذكار',
         'اللهم صل وسلم وبارك على نبينا محمد وعلى آله وصحبه أجمعين 🌸',
-        RepeatInterval.halfHourly, // تظهر كل نصف ساعة
+        RepeatInterval.hourly,
         notificationDetails,
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       );
