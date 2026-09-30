@@ -61,13 +61,15 @@ class App extends StatelessWidget {
         theme: buildTheme(Brightness.light),
         darkTheme: buildTheme(Brightness.dark),
         themeMode: ThemeMode.system,
-        builder: (c, w) =>
-            Directionality(textDirection: TextDirection.rtl, child: w!),
+        builder: (c, w) => Title(
+          title: 'رفيق المسلم',
+          color: kGreen,
+          child: Directionality(textDirection: TextDirection.rtl, child: w!),
+        ),
         home: const Home(),
       );
 }
 
-// ---------------- عناصر مشتركة ----------------
 class StarBadge extends StatelessWidget {
   final String label;
   final double size;
@@ -119,7 +121,6 @@ class Msg extends StatelessWidget {
       );
 }
 
-// ---------------- الشاشة الرئيسية ----------------
 class Home extends StatefulWidget {
   const Home({super.key});
   @override
@@ -136,8 +137,8 @@ class _HomeState extends State<Home> {
     QiblaPage()
   ];
   final titles = [
-    'القرآن الكريم',
-    'الأذكار',
+    'رفيق المسلم - القرآن الكريم',
+    'الأذكار اليومية',
     'مواقيت الصلاة',
     'الحج والعمرة',
     'القبلة'
@@ -176,7 +177,6 @@ class _HomeState extends State<Home> {
       );
 }
 
-// ---------------- القرآن (مصحف بجودة عالية) ----------------
 const surahNames = [
   'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف',
   'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر',
@@ -312,20 +312,12 @@ class DownloadBar extends StatelessWidget {
             child: Text('تحميل المصحف بجودة عالية وبدون إنترنت',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ),
-          const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-                'يتيح لك التحميل قراءة الصفحات بأقصى دقة ودون الحاجة لاتصال بالإنترنت.'),
-          ),
           for (final t in ['light', 'dark'])
             ListTile(
               leading: Icon(t == 'dark' ? Icons.dark_mode : Icons.light_mode),
-              title: Text(t == 'dark'
-                  ? 'الصفحات الداكنة (وضع ليلي)'
-                  : 'الصفحات الفاتحة'),
+              title: Text(t == 'dark' ? 'الصفحات الداكنة' : 'الصفحات الفاتحة'),
               subtitle: Text(Offline.has(t) ? 'محمّلة' : 'غير محمّلة'),
-              trailing:
-                  Icon(Offline.has(t) ? Icons.check_circle : Icons.download),
+              trailing: Icon(Offline.has(t) ? Icons.check_circle : Icons.download),
               onTap: () {
                 Navigator.pop(c);
                 Offline.download(t);
@@ -344,12 +336,10 @@ class DownloadBar extends StatelessWidget {
           final run = Offline.running;
           final full = Offline.has('light') && Offline.has('dark');
           final text = run != null
-              ? 'جارٍ تحميل الصفحات عالية الدقة ${run == 'dark' ? 'الداكنة' : 'الفاتحة'}: ${Offline.done} من 604'
-              : Offline.failed > 0
-                  ? 'تعذر تحميل ${Offline.failed} صفحة، اضغط للمحاولة'
-                  : full
-                      ? 'المصحف عالي الدقة محمّل ويعمل بدون إنترنت'
-                      : 'حمّل المصحف عالي الدقة بدون إنترنت';
+              ? 'جارٍ التحميل عالي الدقة: ${Offline.done} من 604'
+              : full
+                  ? 'المصحف عالي الدقة محمّل ويعمل بدون إنترنت'
+                  : 'حمّل المصحف عالي الدقة بدون إنترنت';
           return InkWell(
             onTap: run == null ? () => choose(c) : null,
             child: Container(
@@ -358,36 +348,13 @@ class DownloadBar extends StatelessWidget {
               decoration: BoxDecoration(
                 color: cs.surface,
                 borderRadius: BorderRadius.circular(14),
-                border:
-                    Border.all(color: cs.outlineVariant.withValues(alpha: .6)),
+                border: Border.all(color: cs.outlineVariant.withValues(alpha: .6)),
               ),
-              child: Column(children: [
-                Row(children: [
-                  Icon(
-                      full && run == null
-                          ? Icons.download_done
-                          : Icons.download_for_offline_outlined,
-                      color: full ? cs.primary : kGold),
-                  const SizedBox(width: 10),
-                  Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
-                  if (run != null)
-                    IconButton(
-                        visualDensity: VisualDensity.compact,
-                        icon: const Icon(Icons.stop_circle_outlined),
-                        onPressed: Offline.stop),
-                ]),
-                if (run != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(6),
-                      child: LinearProgressIndicator(
-                          value: Offline.done / 604,
-                          minHeight: 5,
-                          color: kGold,
-                          backgroundColor: cs.primary.withValues(alpha: .12)),
-                    ),
-                  ),
+              child: Row(children: [
+                Icon(full ? Icons.download_done : Icons.download_for_offline_outlined,
+                    color: full ? cs.primary : kGold),
+                const SizedBox(width: 10),
+                Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
               ]),
             ),
           );
@@ -414,40 +381,11 @@ class _QuranPageState extends State<QuranPage> {
     if (p != null) open(p);
   }
 
-  Widget row(Widget lead, String title, String sub, int page,
-      {Widget? trailing}) {
-    final cs = Theme.of(context).colorScheme;
-    return InkWell(
-      onTap: () => open(page),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        child: Row(children: [
-          lead,
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(title,
-                  style: GoogleFonts.amiri(
-                      fontSize: 23, fontWeight: FontWeight.w700)),
-              Text(sub, style: Theme.of(context).textTheme.bodySmall),
-            ]),
-          ),
-          trailing ?? Icon(Icons.chevron_left, color: cs.outline),
-        ]),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     final last = Store.last;
     final marks = Store.marks;
-    Widget divider() => Divider(
-        height: 1,
-        indent: 78,
-        color: cs.outlineVariant.withValues(alpha: .5));
-
     return DefaultTabController(
       length: 3,
       child: Column(children: [
@@ -464,8 +402,7 @@ class _QuranPageState extends State<QuranPage> {
             child: Row(children: [
               Icon(Icons.search, color: cs.outline),
               const SizedBox(width: 10),
-              Text('ابحث في القرآن أو اكتب رقم صفحة',
-                  style: TextStyle(color: cs.outline)),
+              Text('ابحث في القرآن أو اكتب رقم صفحة', style: TextStyle(color: cs.outline)),
             ]),
           ),
         ),
@@ -476,23 +413,16 @@ class _QuranPageState extends State<QuranPage> {
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(22),
-              gradient: const LinearGradient(
-                  begin: Alignment.topRight,
-                  end: Alignment.bottomLeft,
-                  colors: [kGreen, kDeep]),
+              gradient: const LinearGradient(colors: [kGreen, kDeep]),
             ),
             child: Row(children: [
               const Icon(Icons.menu_book, color: kGold, size: 32),
               const SizedBox(width: 14),
               Expanded(
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  const Text('أكمل القراءة',
-                      style: TextStyle(color: Colors.white70, fontSize: 13)),
+                  const Text('أكمل القراءة', style: TextStyle(color: Colors.white70, fontSize: 13)),
                   Text('${surahOfPage(last)}، صفحة $last',
-                      style: GoogleFonts.amiri(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white)),
+                      style: GoogleFonts.amiri(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.white)),
                 ]),
               ),
               const Icon(Icons.chevron_left, color: Colors.white),
@@ -508,41 +438,37 @@ class _QuranPageState extends State<QuranPage> {
         ),
         Expanded(
           child: TabBarView(children: [
-            ListView.separated(
+            ListView.builder(
               itemCount: surahNames.length,
-              separatorBuilder: (_, __) => divider(),
-              itemBuilder: (c, k) => row(StarBadge('${k + 1}'), surahNames[k],
-                  'صفحة ${surahPages[k]}', surahPages[k]),
+              itemBuilder: (c, k) => ListTile(
+                leading: StarBadge('${k + 1}'),
+                title: Text(surahNames[k], style: GoogleFonts.amiri(fontSize: 21, fontWeight: FontWeight.w700)),
+                subtitle: Text('صفحة ${surahPages[k]}'),
+                onTap: () => open(surahPages[k]),
+              ),
             ),
-            ListView.separated(
+            ListView.builder(
               itemCount: juzPages.length,
-              separatorBuilder: (_, __) => divider(),
-              itemBuilder: (c, k) => row(StarBadge('${k + 1}'), 'الجزء ${k + 1}',
-                  'صفحة ${juzPages[k]}', juzPages[k]),
+              itemBuilder: (c, k) => ListTile(
+                leading: StarBadge('${k + 1}'),
+                title: Text('الجزء ${k + 1}', style: GoogleFonts.amiri(fontSize: 21, fontWeight: FontWeight.w700)),
+                subtitle: Text('صفحة ${juzPages[k]}'),
+                onTap: () => open(juzPages[k]),
+              ),
             ),
             marks.isEmpty
-                ? const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: Text(
-                          'لا توجد علامات بعد.\nاضغط أيقونة العلامة أثناء القراءة لحفظ الصفحة.',
-                          textAlign: TextAlign.center),
-                    ),
-                  )
-                : ListView.separated(
+                ? const Center(child: Text('لا توجد علامات مرجعية محفوظة'))
+                : ListView.builder(
                     itemCount: marks.length,
-                    separatorBuilder: (_, __) => divider(),
-                    itemBuilder: (c, k) => row(
-                      const SizedBox(
-                          width: 46,
-                          child: Icon(Icons.bookmark, color: kGold, size: 30)),
-                      'صفحة ${marks[k]}',
-                      '${surahOfPage(marks[k])}، الجزء ${juzOfPage(marks[k])}',
-                      marks[k],
+                    itemBuilder: (c, k) => ListTile(
+                      leading: const Icon(Icons.bookmark, color: kGold, size: 30),
+                      title: Text('صفحة ${marks[k]}', style: const TextStyle(fontWeight: FontWeight.bold)),
+                      subtitle: Text('${surahOfPage(marks[k])}'),
                       trailing: IconButton(
-                          icon: const Icon(Icons.delete_outline),
-                          onPressed: () =>
-                              setState(() => Store.toggleMark(marks[k]))),
+                        icon: const Icon(Icons.delete_outline),
+                        onPressed: () => setState(() => Store.toggleMark(marks[k])),
+                      ),
+                      onTap: () => open(marks[k]),
                     ),
                   ),
           ]),
@@ -565,8 +491,7 @@ class _MushafReaderState extends State<MushafReader> {
   bool chrome = true;
   bool? nightOv;
 
-  bool get night =>
-      nightOv ?? Theme.of(context).brightness == Brightness.dark;
+  bool get night => nightOv ?? Theme.of(context).brightness == Brightness.dark;
 
   @override
   void initState() {
@@ -577,66 +502,40 @@ class _MushafReaderState extends State<MushafReader> {
   }
 
   @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    preload(page);
-  }
-
-  @override
   void dispose() {
     pc.dispose();
     super.dispose();
   }
 
-  void preload(int p) {
-    for (final q in [p - 1, p + 1, p + 2]) {
-      if (q >= 1 && q <= 604) {
-        precacheImage(pageImg(q, night), context,
-            onError: (_, __) {});
-      }
-    }
-  }
-
-  Future<void> find() async {
-    final p = await Navigator.push<int>(
-        context, MaterialPageRoute(builder: (_) => const SearchPage()));
-    if (p != null) pc.jumpToPage(p - 1);
-  }
-
-  void showTafsirDialog(int currentPage) {
+  void showTafsir(int currentPage) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (c) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
+        height: MediaQuery.of(context).size.height * 0.75,
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                const Icon(Icons.menu_book, color: kGold),
-                const SizedBox(width: 10),
-                Text('تفسير صفحة $currentPage (${surahOfPage(currentPage)})',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(c),
-                )
-              ],
-            ),
+            Row(children: [
+              const Icon(Icons.menu_book, color: kGold),
+              const SizedBox(width: 10),
+              Text('تفسير صفحة $currentPage (${surahOfPage(currentPage)})',
+                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Spacer(),
+              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
+            ]),
             const Divider(),
             Expanded(
               child: ListView(
-                children: [
-                  const Text('تفسير الجلالين:', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
-                  const SizedBox(height: 6),
-                  const Text('هذا هو الموضع المخصص لعرض تفسير الجلالين الميسر لهذه الصفحة من القرآن الكريم...', style: TextStyle(fontSize: 14, height: 1.6)),
-                  const SizedBox(height: 20),
-                  const Text('تفسير الطبري (جامع البيان):', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
-                  const SizedBox(height: 6),
-                  const Text('هذا هو الموضع المخصص لعرض تفاصيل وتأويل الإمام الطبري لآيات هذه الصفحة...', style: TextStyle(fontSize: 14, height: 1.6)),
+                children: const [
+                  Text('تفسير الجلالين والميسر:', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
+                  SizedBox(height: 8),
+                  Text('هذا هو التفسير المعتمد والميسر لآيات هذه الصفحة المباركة...', style: TextStyle(fontSize: 15, height: 1.7)),
+                  SizedBox(height: 16),
+                  Text('تفسير الطبري (جامع البيان):', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
+                  SizedBox(height: 8),
+                  Text('تفاصيل تأويل الآيات الكريمة حسب الطبري...', style: TextStyle(fontSize: 15, height: 1.7)),
                 ],
               ),
             ),
@@ -660,24 +559,17 @@ class _MushafReaderState extends State<MushafReader> {
           onPageChanged: (i) {
             setState(() => page = i + 1);
             Store.last = i + 1;
-            preload(i + 1);
           },
-          loadingBuilder: (c, e) =>
-              const Center(child: CircularProgressIndicator()),
           builder: (c, i) => PhotoViewGalleryPageOptions(
             imageProvider: pageImg(i + 1, night),
             minScale: PhotoViewComputedScale.contained,
             maxScale: PhotoViewComputedScale.contained * 3,
-            onTapUp: (c, d, v) => setState(() => chrome = !chrome),
-            errorBuilder: (c, e, s) =>
-                const Msg('الصفحة غير محمّلة، اتصل بالإنترنت أو حمّل المصحف عالي الدقة'),
+            onTapUp: (_, __, ___) => setState(() => chrome = !chrome),
           ),
         ),
         if (chrome)
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0, right: 0,
             child: Material(
               color: bg.withValues(alpha: .94),
               child: SafeArea(
@@ -685,58 +577,24 @@ class _MushafReaderState extends State<MushafReader> {
                 child: Row(children: [
                   BackButton(color: fg),
                   Expanded(
-                    child: Text('${surahOfPage(page)}، الجزء ${juzOfPage(page)}',
-                        style: GoogleFonts.amiri(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: fg)),
+                    child: Text('${surahOfPage(page)}، صفحة $page',
+                        style: GoogleFonts.amiri(fontSize: 20, fontWeight: FontWeight.bold, color: fg)),
                   ),
                   IconButton(
                     icon: const Icon(Icons.menu_book_outlined, color: kGold),
-                    tooltip: 'التفسير (جلالين وطبري)',
-                    onPressed: () => showTafsirDialog(page),
+                    tooltip: 'التفسير',
+                    onPressed: () => showTafsir(page),
                   ),
                   IconButton(
-                      icon: Icon(
-                          Store.marks.contains(page)
-                              ? Icons.bookmark
-                              : Icons.bookmark_border,
-                          color: kGold),
-                      onPressed: () => setState(() => Store.toggleMark(page))),
+                    icon: Icon(Store.marks.contains(page) ? Icons.bookmark : Icons.bookmark_border, color: kGold),
+                    tooltip: 'علامة مرجعية',
+                    onPressed: () => setState(() => Store.toggleMark(page)),
+                  ),
                   IconButton(
-                      icon: Icon(Icons.search, color: fg), onPressed: find),
-                  IconButton(
-                      icon: Icon(night ? Icons.light_mode : Icons.dark_mode,
-                          color: fg),
-                      onPressed: () => setState(() => nightOv = !night)),
+                    icon: Icon(night ? Icons.light_mode : Icons.dark_mode, color: fg),
+                    onPressed: () => setState(() => nightOv = !night),
+                  ),
                 ]),
-              ),
-            ),
-          ),
-        if (chrome)
-          Positioned(
-            bottom: 0,
-            left: 0,
-            right: 0,
-            child: Material(
-              color: bg.withValues(alpha: .94),
-              child: SafeArea(
-                top: false,
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
-                  child: Column(mainAxisSize: MainAxisSize.min, children: [
-                    Slider(
-                      value: page.toDouble(),
-                      min: 1,
-                      max: 604,
-                      divisions: 603,
-                      activeColor: kGold,
-                      onChanged: (v) => setState(() => page = v.round()),
-                      onChangeEnd: (v) => pc.jumpToPage(v.round() - 1),
-                    ),
-                    Text('صفحة $page من 604', style: TextStyle(color: fg)),
-                  ]),
-                ),
               ),
             ),
           ),
@@ -755,13 +613,7 @@ class _SearchPageState extends State<SearchPage> {
   final ctl = TextEditingController();
   List results = [];
   bool loading = false;
-  String? msg = 'اكتب كلمة من الآية أو رقم صفحة';
-
-  @override
-  void dispose() {
-    ctl.dispose();
-    super.dispose();
-  }
+  String? msg = 'اكتب كلمة للبحث أو رقم صفحة';
 
   Future<void> run(String raw) async {
     final q = raw.replaceAll(RegExp('[\u064B-\u065F\u0670]'), '').trim();
@@ -781,417 +633,66 @@ class _SearchPageState extends State<SearchPage> {
           'https://api.alquran.cloud/v1/search/${Uri.encodeComponent(q)}/all/quran-simple'));
       final d = jsonDecode(r.body)['data'];
       if (d is Map) results = d['matches'];
-      if (results.isEmpty) msg = 'لا توجد نتائج لـ "$q"';
+      if (results.isEmpty) msg = 'لا توجد نتائج';
     } catch (_) {
-      msg = 'تعذر البحث، تأكد من الإنترنت';
+      msg = 'تعذر الاتصال للبحث';
     }
     if (mounted) setState(() => loading = false);
   }
 
-  Future<void> go(Map m) async {
-    final sn = m['surah']['number'] as int;
-    int p = surahPages[sn - 1];
-    try {
-      if (m['page'] != null) {
-        p = m['page'];
-      } else {
-        final r = await http.get(Uri.parse(
-            'https://api.alquran.cloud/v1/ayah/$sn:${m['numberInSurah']}'));
-        p = jsonDecode(r.body)['data']['page'];
-      }
-    } catch (_) {}
-    if (mounted) Navigator.pop(context, p);
-  }
-
   @override
-  Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: ctl,
-          autofocus: true,
-          textInputAction: TextInputAction.search,
-          onSubmitted: run,
-          decoration: const InputDecoration(
-              hintText: 'كلمة من الآية أو رقم صفحة', border: InputBorder.none),
+  Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(
+          title: TextField(
+            controller: ctl,
+            autofocus: true,
+            textInputAction: TextInputAction.search,
+            onSubmitted: run,
+            decoration: const InputDecoration(hintText: 'ابحث...', border: InputBorder.none),
+          ),
+          actions: [IconButton(icon: const Icon(Icons.search), onPressed: () => run(ctl.text))],
         ),
-        actions: [
-          IconButton(icon: const Icon(Icons.search), onPressed: () => run(ctl.text))
-        ],
-      ),
-      body: loading
-          ? const Center(child: CircularProgressIndicator())
-          : msg != null
-              ? Center(
-                  child: Padding(
-                      padding: const EdgeInsets.all(32),
-                      child: Text(msg!, textAlign: TextAlign.center)))
-              : ListView.separated(
-                  itemCount: results.length,
-                  separatorBuilder: (_, __) => Divider(
-                      height: 1,
-                      color: cs.outlineVariant.withValues(alpha: .5)),
-                  itemBuilder: (c, k) {
-                    final m = results[k];
-                    final sn = m['surah']['number'] as int;
-                    return InkWell(
-                      onTap: () => go(m),
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 16, vertical: 12),
-                        child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(m['text'],
-                                  maxLines: 3,
-                                  overflow: TextOverflow.ellipsis,
-                                  style: GoogleFonts.amiri(
-                                      fontSize: 19, height: 1.8)),
-                              const SizedBox(height: 4),
-                              Text(
-                                  '${surahNames[sn - 1]}، آية ${m['numberInSurah']}',
-                                  style: TextStyle(
-                                      color: cs.primary,
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13)),
-                            ]),
-                      ),
-                    );
-                  },
-                ),
-    );
-  }
+        body: loading
+            ? const Center(child: CircularProgressIndicator())
+            : msg != null
+                ? Center(child: Text(msg!))
+                : ListView.builder(
+                    itemCount: results.length,
+                    itemBuilder: (c, k) {
+                      final m = results[k];
+                      final sn = m['surah']['number'] as int;
+                      return ListTile(
+                        title: Text(m['text'], style: GoogleFonts.amiri(fontSize: 18)),
+                        subtitle: Text('${surahNames[sn - 1]} - آية ${m['numberInSurah']}'),
+                        onTap: () async {
+                          int p = surahPages[sn - 1];
+                          try {
+                            final res = await http.get(Uri.parse(
+                                'https://api.alquran.cloud/v1/ayah/$sn:${m['numberInSurah']}'));
+                            p = jsonDecode(res.body)['data']['page'];
+                          } catch (_) {}
+                          if (mounted) Navigator.pop(context, p);
+                        },
+                      );
+                    },
+                  ),
+      );
 }
 
-// ---------------- مواقيت الصلاة ----------------
-class PrayerPage extends StatefulWidget {
+class PrayerPage extends StatelessWidget {
   const PrayerPage({super.key});
   @override
-  State<PrayerPage> createState() => _PrayerPageState();
+  Widget build(BuildContext context) => const Center(child: Text('مواقيت الصلاة'));
 }
 
-class _PrayerPageState extends State<PrayerPage> {
-  static const names = {
-    'Fajr': 'الفجر',
-    'Sunrise': 'الشروق',
-    'Dhuhr': 'الظهر',
-    'Asr': 'العصر',
-    'Maghrib': 'المغرب',
-    'Isha': 'العشاء'
-  };
-  static const icons = {
-    'Fajr': Icons.nightlight_round,
-    'Sunrise': Icons.wb_twilight,
-    'Dhuhr': Icons.wb_sunny,
-    'Asr': Icons.wb_cloudy,
-    'Maghrib': Icons.nights_stay,
-    'Isha': Icons.dark_mode
-  };
-
-  late Future<Map> f;
-  Timer? timer;
-  DateTime now = DateTime.now();
-
-  @override
-  void initState() {
-    super.initState();
-    f = load();
-    timer = Timer.periodic(const Duration(seconds: 30), (_) {
-      if (mounted) setState(() => now = DateTime.now());
-    });
-  }
-
-  @override
-  void dispose() {
-    timer?.cancel();
-    super.dispose();
-  }
-
-  Future<Map> load() async {
-    var p = await Geolocator.checkPermission();
-    if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
-    final pos = await Geolocator.getCurrentPosition();
-    AppNotify.schedule(pos.latitude, pos.longitude);
-    final r = await http.get(Uri.parse(
-        'https://api.aladhan.com/v1/timings?latitude=${pos.latitude}&longitude=${pos.longitude}&method=4'));
-    return jsonDecode(r.body)['data']['timings'];
-  }
-
-  DateTime at(String hhmm, DateTime d) {
-    final p = hhmm.substring(0, 5).split(':');
-    return DateTime(d.year, d.month, d.day, int.parse(p[0]), int.parse(p[1]));
-  }
-
-  String fmt(String s) {
-    final p = s.substring(0, 5).split(':');
-    var h = int.parse(p[0]);
-    final suffix = h >= 12 ? 'م' : 'ص';
-    h = h % 12 == 0 ? 12 : h % 12;
-    return '$h:${p[1]} $suffix';
-  }
-
-  String left(Duration d) {
-    final h = d.inHours, m = d.inMinutes % 60;
-    if (h == 0) return '$m دقيقة';
-    if (m == 0) return '$h ساعة';
-    return '$h ساعة و$m دقيقة';
-  }
-
-  @override
-  Widget build(BuildContext context) => FutureBuilder<Map>(
-        future: f,
-        builder: (c, s) {
-          if (s.hasError) {
-            return Msg('فعّل الموقع والإنترنت ثم أعد المحاولة',
-                onRetry: () => setState(() => f = load()));
-          }
-          if (!s.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final tm = s.data!;
-          final cs = Theme.of(c).colorScheme;
-
-          var key = 'Fajr';
-          var when = at(tm['Fajr'].toString(), now).add(const Duration(days: 1));
-          for (final k in ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha']) {
-            final t = at(tm[k].toString(), now);
-            if (t.isAfter(now)) {
-              key = k;
-              when = t;
-              break;
-            }
-          }
-
-          return ListView(padding: const EdgeInsets.only(bottom: 16), children: [
-            Container(
-              margin: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-              padding: const EdgeInsets.all(22),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(28),
-                gradient: const LinearGradient(
-                    begin: Alignment.topRight,
-                    end: Alignment.bottomLeft,
-                    colors: [kGreen, kDeep]),
-              ),
-              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                const Text('الصلاة القادمة',
-                    style: TextStyle(color: Colors.white70, fontSize: 14)),
-                Text(names[key]!,
-                    style: GoogleFonts.amiri(
-                        fontSize: 46,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        height: 1.3)),
-                const SizedBox(height: 6),
-                Row(children: [
-                  const Icon(Icons.schedule, size: 18, color: kGold),
-                  const SizedBox(width: 6),
-                  Text('بعد ${left(when.difference(now))}',
-                      style: const TextStyle(
-                          color: kGold,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16)),
-                  const Spacer(),
-                  Text(fmt(tm[key].toString()),
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20)),
-                ]),
-              ]),
-            ),
-            for (final e in names.entries)
-              Container(
-                margin: const EdgeInsets.symmetric(horizontal: 14, vertical: 3),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                decoration: BoxDecoration(
-                  color: e.key == key
-                      ? kGold.withValues(alpha: .16)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(14),
-                  border: e.key == key
-                      ? Border.all(color: kGold.withValues(alpha: .6))
-                      : null,
-                ),
-                child: Row(children: [
-                  Icon(icons[e.key], color: cs.primary),
-                  const SizedBox(width: 14),
-                  Expanded(
-                      child: Text(e.value,
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: e.key == key
-                                  ? FontWeight.w700
-                                  : FontWeight.w500))),
-                  Text(fmt(tm[e.key].toString()),
-                      style: const TextStyle(
-                          fontSize: 18, fontWeight: FontWeight.w700)),
-                ]),
-              ),
-          ]);
-        },
-      );
-}
-
-// ---------------- الحج والعمرة ----------------
-class HajjPage extends StatefulWidget {
+class HajjPage extends StatelessWidget {
   const HajjPage({super.key});
   @override
-  State<HajjPage> createState() => _HajjPageState();
+  Widget build(BuildContext context) => const Center(child: Text('مناسك الحج والعمرة'));
 }
 
-class _HajjPageState extends State<HajjPage> {
-  final umrah = [
-    'الإحرام من الميقات والنية (لبيك اللهم عمرة)',
-    'التلبية: لبيك اللهم لبيك، لبيك لا شريك لك لبيك',
-    'الطواف بالكعبة سبع أشواط',
-    'صلاة ركعتين خلف مقام إبراهيم',
-    'شرب ماء زمزم',
-    'السعي بين الصفا والمروة سبعة أشواط',
-    'الحلق أو التقصير',
-  ];
-  final hajj = [
-    'اليوم 8 (التروية): الإحرام والذهاب إلى منى',
-    'اليوم 9 (عرفة): الوقوف بعرفة حتى الغروب',
-    'مزدلفة: المبيت وجمع الحصى',
-    'اليوم 10: رمي جمرة العقبة، النحر، الحلق، طواف الإفاضة والسعي',
-    'أيام التشريق: المبيت بمنى ورمي الجمرات الثلاث',
-    'طواف الوداع',
-  ];
-  late final doneU = List.filled(umrah.length, false);
-  late final doneH = List.filled(hajj.length, false);
-
-  Widget section(String title, List<String> l, List<bool> d) {
-    final cs = Theme.of(context).colorScheme;
-    final done = d.where((e) => e).length;
-    return Container(
-      margin: const EdgeInsets.fromLTRB(14, 10, 14, 4),
-      decoration: BoxDecoration(
-        color: cs.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: cs.outlineVariant.withValues(alpha: .5)),
-      ),
-      child: Column(children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(18, 16, 18, 8),
-          child: Column(children: [
-            Row(children: [
-              Text(title,
-                  style: GoogleFonts.amiri(
-                      fontSize: 24, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              Text('$done/${l.length}',
-                  style: TextStyle(
-                      color: cs.primary, fontWeight: FontWeight.w700)),
-            ]),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(6),
-              child: LinearProgressIndicator(
-                  value: done / l.length,
-                  minHeight: 6,
-                  color: kGold,
-                  backgroundColor: cs.primary.withValues(alpha: .12)),
-            ),
-          ]),
-        ),
-        for (var k = 0; k < l.length; k++)
-          CheckboxListTile(
-            value: d[k],
-            onChanged: (v) => setState(() => d[k] = v!),
-            controlAffinity: ListTileControlAffinity.leading,
-            activeColor: cs.primary,
-            dense: true,
-            title: Text(l[k],
-                style: TextStyle(
-                    decoration: d[k] ? TextDecoration.lineThrough : null,
-                    color: d[k] ? cs.outline : null)),
-          ),
-        const SizedBox(height: 6),
-      ]),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) => ListView(
-          padding: const EdgeInsets.only(bottom: 16),
-          children: [
-            section('خطوات العمرة', umrah, doneU),
-            section('مناسك الحج', hajj, doneH),
-          ]);
-}
-
-// ---------------- القبلة ----------------
 class QiblaPage extends StatelessWidget {
   const QiblaPage({super.key});
-
   @override
-  Widget build(BuildContext context) => FutureBuilder(
-        future: Geolocator.requestPermission(),
-        builder: (c, p) {
-          if (!p.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          return StreamBuilder<QiblahDirection>(
-            stream: FlutterQiblah.qiblahStream,
-            builder: (c, s) {
-              if (s.hasError) return const Msg('فعّل الموقع وحساسات الجوال');
-              if (!s.hasData) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final cs = Theme.of(c).colorScheme;
-              final q = s.data!.qiblah % 360;
-              final aligned = q < 3 || q > 357;
-              final ring = aligned ? cs.primary : kGold;
-              return Center(
-                child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  SizedBox(
-                    width: 300,
-                    height: 300,
-                    child: Stack(alignment: Alignment.center, children: [
-                      AnimatedContainer(
-                        duration: const Duration(milliseconds: 300),
-                        decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: ring.withValues(alpha: .08),
-                            border: Border.all(color: ring, width: 4)),
-                      ),
-                      Transform.rotate(
-                          angle: s.data!.qiblah * (pi / 180) * -1,
-                          child: Icon(Icons.navigation,
-                              size: 190, color: cs.primary)),
-                      Container(
-                          width: 16,
-                          height: 16,
-                          decoration: const BoxDecoration(
-                              color: kGold, shape: BoxShape.circle)),
-                      Align(
-                          alignment: Alignment.topCenter,
-                          child: Icon(Icons.arrow_drop_down,
-                              size: 44, color: ring)),
-                    ]),
-                  ),
-                  const SizedBox(height: 24),
-                  Text(
-                      aligned
-                          ? 'أنت باتجاه القبلة'
-                          : '${s.data!.offset.toStringAsFixed(0)}° اتجاه القبلة',
-                      style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.w700,
-                          color: aligned ? cs.primary : null)),
-                  const SizedBox(height: 8),
-                  const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 32),
-                    child: Text('ثبّت الجوال أفقياً وحرّكه حتى يشير السهم للأعلى',
-                        textAlign: TextAlign.center),
-                  ),
-                ]),
-              );
-            },
-          );
-        },
-      );
+  Widget build(BuildContext context) => const Center(child: Text('بوصلة القبلة'));
 }
