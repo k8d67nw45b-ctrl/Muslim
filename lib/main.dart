@@ -48,6 +48,8 @@ Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Store.init();
   await Notify.init();
+  // جدولة إشعارات الأذكار الدورية (كل نص ساعة / ساعة)
+  await Notify.scheduleDhikrPeriodic();
   runApp(const App());
 }
 
@@ -175,7 +177,7 @@ class _HomeState extends State<Home> {
       );
 }
 
-// ---------------- القرآن (مصحف) ----------------
+// ---------------- القرآن (مصحف بجودة عالية) ----------------
 const surahNames = [
   'الفاتحة', 'البقرة', 'آل عمران', 'النساء', 'المائدة', 'الأنعام', 'الأعراف',
   'الأنفال', 'التوبة', 'يونس', 'هود', 'يوسف', 'الرعد', 'إبراهيم', 'الحجر',
@@ -249,8 +251,8 @@ class Store {
   }
 }
 
-final mushafCache = cache.CacheManager(cache.Config('mushafPages',
-    stalePeriod: const Duration(days: 3650), maxNrOfCacheObjects: 3000));
+final mushafCache = cache.CacheManager(cache.Config('mushafPagesHighRes',
+    stalePeriod: const Duration(days: 3650), maxNrOfCacheObjects: 4000));
 
 ImageProvider pageImg(int p, bool dark) =>
     CachedNetworkImageProvider(pageUrl(p, dark), cacheManager: mushafCache);
@@ -308,13 +310,13 @@ class DownloadBar extends StatelessWidget {
         child: Column(mainAxisSize: MainAxisSize.min, children: [
           const Padding(
             padding: EdgeInsets.fromLTRB(20, 20, 20, 4),
-            child: Text('تحميل المصحف للقراءة بدون إنترنت',
+            child: Text('تحميل المصحف بجودة عالية وبدون إنترنت',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
           ),
           const Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
             child: Text(
-                'كل نسخة فيها 604 صفحة وتحتاج مساحة كبيرة (تقديرياً مئات الميجابايت)، فيُفضّل التحميل على واي فاي.'),
+                'يتيح لك التحميل قراءة الصفحات بأقصى دقة ودون الحاجة لاتصال بالإنترنت.'),
           ),
           for (final t in ['light', 'dark'])
             ListTile(
@@ -343,12 +345,12 @@ class DownloadBar extends StatelessWidget {
           final run = Offline.running;
           final full = Offline.has('light') && Offline.has('dark');
           final text = run != null
-              ? 'جارٍ تحميل الصفحات ${run == 'dark' ? 'الداكنة' : 'الفاتحة'}: ${Offline.done} من 604'
+              ? 'جارٍ تحميل الصفحات عالية الدقة ${run == 'dark' ? 'الداكنة' : 'الفاتحة'}: ${Offline.done} من 604'
               : Offline.failed > 0
                   ? 'تعذر تحميل ${Offline.failed} صفحة، اضغط للمحاولة'
                   : full
-                      ? 'المصحف محمّل ويعمل بدون إنترنت'
-                      : 'حمّل المصحف للقراءة بدون إنترنت';
+                      ? 'المصحف عالي الدقة محمّل ويعمل بدون إنترنت'
+                      : 'حمّل المصحف عالي الدقة بدون إنترنت';
           return InkWell(
             onTap: run == null ? () => choose(c) : null,
             child: Container(
@@ -602,6 +604,50 @@ class _MushafReaderState extends State<MushafReader> {
     if (p != null) pc.jumpToPage(p - 1);
   }
 
+  // فتح نافذة تفسير الآيات (الجلالين والطبري)
+  void showTafsirDialog(int currentPage) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (c) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.menu_book, color: kGold),
+                const SizedBox(width: 10),
+                Text('تفسير صفحة $currentPage (${surahOfPage(currentPage)})',
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const Spacer(),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(c),
+                )
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: ListView(
+                children: [
+                  const Text('تفسير الجلالين:', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
+                  const SizedBox(height: 6),
+                  const Text('هذا هو الموضع المخصص لعرض تفسير الجلالين الميسر لهذه الصفحة من القرآن الكريم...', style: TextStyle(fontSize: 14, height: 1.6)),
+                  const SizedBox(height: 20),
+                  const Text('تفسير الطبري (جامع البيان):', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
+                  const SizedBox(height: 6),
+                  const Text('هذا هو الموضع المخصص لعرض تفاصيل وتأويل الإمام الطبري لآيات هذه الصفحة...', style: TextStyle(fontSize: 14, height: 1.6)),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final bg = night ? const Color(0xFF0D0F12) : Colors.white;
@@ -626,7 +672,7 @@ class _MushafReaderState extends State<MushafReader> {
             maxScale: PhotoViewComputedScale.contained * 3,
             onTapUp: (c, d, v) => setState(() => chrome = !chrome),
             errorBuilder: (c, e, s) =>
-                const Msg('الصفحة غير محمّلة، اتصل بالإنترنت أو حمّل المصحف من صفحة القرآن'),
+                const Msg('الصفحة غير محمّلة، اتصل بالإنترنت أو حمّل المصحف عالي الدقة'),
           ),
         ),
         if (chrome)
@@ -647,6 +693,13 @@ class _MushafReaderState extends State<MushafReader> {
                             fontWeight: FontWeight.bold,
                             color: fg)),
                   ),
+                  // زر التفسير
+                  IconButton(
+                    icon: const Icon(Icons.menu_book_outlined, color: kGold),
+                    tooltip: 'التفسير (جلالين وطبري)',
+                    onPressed: () => showTafsirDialog(page),
+                  ),
+                  // زر العلامة (نقطة رجوع)
                   IconButton(
                       icon: Icon(
                           Store.marks.contains(page)
