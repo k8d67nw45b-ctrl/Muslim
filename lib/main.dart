@@ -47,9 +47,8 @@ ThemeData buildTheme(Brightness b) {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Store.init();
-  await Notify.init();
-  // جدولة إشعارات الأذكار الدورية (كل نص ساعة / ساعة)
-  await Notify.scheduleDhikrPeriodic();
+  await AppNotify.init();
+  await AppNotify.scheduleDhikrPeriodic();
   runApp(const App());
 }
 
@@ -604,7 +603,6 @@ class _MushafReaderState extends State<MushafReader> {
     if (p != null) pc.jumpToPage(p - 1);
   }
 
-  // فتح نافذة تفسير الآيات (الجلالين والطبري)
   void showTafsirDialog(int currentPage) {
     showModalBottomSheet(
       context: context,
@@ -693,13 +691,11 @@ class _MushafReaderState extends State<MushafReader> {
                             fontWeight: FontWeight.bold,
                             color: fg)),
                   ),
-                  // زر التفسير
                   IconButton(
                     icon: const Icon(Icons.menu_book_outlined, color: kGold),
                     tooltip: 'التفسير (جلالين وطبري)',
                     onPressed: () => showTafsirDialog(page),
                   ),
-                  // زر العلامة (نقطة رجوع)
                   IconButton(
                       icon: Icon(
                           Store.marks.contains(page)
@@ -916,7 +912,7 @@ class _PrayerPageState extends State<PrayerPage> {
     var p = await Geolocator.checkPermission();
     if (p == LocationPermission.denied) p = await Geolocator.requestPermission();
     final pos = await Geolocator.getCurrentPosition();
-    Notify.schedule(pos.latitude, pos.longitude);
+    AppNotify.schedule(pos.latitude, pos.longitude);
     final r = await http.get(Uri.parse(
         'https://api.aladhan.com/v1/timings?latitude=${pos.latitude}&longitude=${pos.longitude}&method=4'));
     return jsonDecode(r.body)['data']['timings'];
