@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_cache_manager/flutter_cache_manager.dart' as cache;
 import 'package:flutter_qiblah/flutter_qiblah.dart';
 import 'package:geolocator/geolocator.dart';
@@ -11,8 +12,7 @@ import 'package:http/http.dart' as http;
 import 'package:photo_view/photo_view.dart';
 import 'package:photo_view/photo_view_gallery.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'adhkar.dart';
-import 'notify.dart';
+import 'package:share_plus/share_plus.dart';
 
 const kGreen = Color(0xFF0B6E4F);
 const kDeep = Color(0xFF06382A);
@@ -47,8 +47,6 @@ ThemeData buildTheme(Brightness b) {
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Store.init();
-  await AppNotify.init();
-  await AppNotify.scheduleDhikrPeriodic();
   runApp(const App());
 }
 
@@ -138,10 +136,10 @@ class _HomeState extends State<Home> {
   ];
   final titles = [
     'رفيق المسلم - القرآن الكريم',
-    'الأذكار اليومية',
+    'حصن المسلم والأذكار',
     'مواقيت الصلاة',
-    'الحج والعمرة',
-    'القبلة'
+    'مناسك الحج والعمرة',
+    'اتجاه القبلة'
   ];
 
   @override
@@ -507,39 +505,113 @@ class _MushafReaderState extends State<MushafReader> {
     super.dispose();
   }
 
-  void showTafsir(int currentPage) {
+  // عرض آيات الصفحة الحالية مع خيارات التفسير والمشاركة لكل آية
+  void showPageAyahs(int currentPage) async {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       builder: (c) => Container(
-        height: MediaQuery.of(context).size.height * 0.75,
+        height: MediaQuery.of(context).size.height * 0.85,
         padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(children: [
-              const Icon(Icons.menu_book, color: kGold),
-              const SizedBox(width: 10),
-              Text('تفسير صفحة $currentPage (${surahOfPage(currentPage)})',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const Spacer(),
-              IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
-            ]),
-            const Divider(),
-            Expanded(
-              child: ListView(
-                children: const [
-                  Text('تفسير الجلالين والميسر:', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
-                  SizedBox(height: 8),
-                  Text('هذا هو التفسير المعتمد والميسر لآيات هذه الصفحة المباركة...', style: TextStyle(fontSize: 15, height: 1.7)),
-                  SizedBox(height: 16),
-                  Text('تفسير الطبري (جامع البيان):', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen, fontSize: 16)),
-                  SizedBox(height: 8),
-                  Text('تفاصيل تأويل الآيات الكريمة حسب الطبري...', style: TextStyle(fontSize: 15, height: 1.7)),
+        child: FutureBuilder<http.Response>(
+          future: http.get(Uri.parse('https://api.alquran.cloud/v1/page/$currentPage/ar.jalalayn')),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            if (snapshot.hasError || !snapshot.hasData) {
+              return const Center(child: Text('تعذر تحميل آيات الصفحة'));
+            }
+            try {
+              final data = jsonDecode(snapshot.data!.body)['data'];
+              final ayahs = data['ayahs'] as List;
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(children: [
+                    const Icon(Icons.menu_book, color: kGold),
+                    const SizedBox(width: 10),
+                    Text('آيات صفحة $currentPage (${surahOfPage(currentPage)})',
+                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Spacer(),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(c)),
+                  ]),
+                  const Divider(),
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: ayahs.length,
+                      itemBuilder: (context, index) {
+                        final ayah = ayahs[index];
+                        final ayahText = ayah['text'];
+                        final ayahNum = ayah['numberInSurah'];
+                        final surahName = ayah['surah']['name'];
+                        final jalalayn = ayah['text']; // أو التفسير المرتبط
+
+                        return Card(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('$ayahText ($surahName - آية $ayahNum)',
+                                    style: GoogleFonts.amiri(fontSize: 18, fontWeight: FontWeight.bold, color: kGreen)),
+                                const SizedBox(height: 8),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    OutlinedButton.icon(
+                                      onPressed: () {
+                                        showDialog(
+                                          context: context,
+                                          builder: (ctx) => AlertDialog(
+                                            title: Text('تفسير الآية $ayahNum - $surahName'),
+                                            content: SingleChildScrollView(
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                children: [
+                                                  const Text('تفسير الجلالين والميسر:', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen)),
+                                                  const SizedBox(height: 4),
+                                                  Text('تفسير الآية الكريمة: $ayahText\n... (تفسير الجلالين المعتمد)', style: const TextStyle(fontSize: 15)),
+                                                  const SizedBox(height: 12),
+                                                  const Text('تفسير الطبري (جامع البيان):', style: TextStyle(fontWeight: FontWeight.bold, color: kGreen)),
+                                                  const SizedBox(height: 4),
+                                                  Text('تأويل الطبري للآية الكريمة...', style: const TextStyle(fontSize: 15)),
+                                                ],
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('إغلاق'))
+                                            ],
+                                          ),
+                                        );
+                                      },
+                                      icon: const Icon(Icons.menu_book_outlined, size: 18),
+                                      label: const Text('التفسير'),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    FilledButton.icon(
+                                      onPressed: () {
+                                        Share.share('﴿$ayahText﴾ [$surahName - آية $ayahNum]\nمشاركة من تطبيق رفيق المسلم');
+                                      },
+                                      icon: const Icon(Icons.share, size: 18),
+                                      label: const Text('مشاركة'),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
                 ],
-              ),
-            ),
-          ],
+              );
+            } catch (_) {
+              return const Center(child: Text('حدث خطأ في معالجة الآيات'));
+            }
+          },
         ),
       ),
     );
@@ -581,9 +653,9 @@ class _MushafReaderState extends State<MushafReader> {
                         style: GoogleFonts.amiri(fontSize: 20, fontWeight: FontWeight.bold, color: fg)),
                   ),
                   IconButton(
-                    icon: const Icon(Icons.menu_book_outlined, color: kGold),
-                    tooltip: 'التفسير',
-                    onPressed: () => showTafsir(page),
+                    icon: const Icon(Icons.list_alt, color: kGold),
+                    tooltip: 'آيات الصفحة والتفسير',
+                    onPressed: () => showPageAyahs(page),
                   ),
                   IconButton(
                     icon: Icon(Store.marks.contains(page) ? Icons.bookmark : Icons.bookmark_border, color: kGold),
@@ -679,20 +751,233 @@ class _SearchPageState extends State<SearchPage> {
       );
 }
 
-class PrayerPage extends StatelessWidget {
+class AdhkarPage extends StatelessWidget {
+  const AdhkarPage({super.key});
+
+  final categories = const [
+    {
+      'title': 'أذكار الصباح',
+      'items': [
+        'أصبحنا وأصبح الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير.',
+        'اللهم بك أصبحنا وبك أمسينا، وبك نحيا وبك نموت وإليك النشور.',
+        'رضيت بالله رباً، وبالاسلام ديناً، وبمحمد صلى الله عليه وسلم نبياً.'
+      ]
+    },
+    {
+      'title': 'أذكار المساء',
+      'items': [
+        'أمسينا وأمسى الملك لله، والحمد لله، لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير.',
+        'اللهم بك أمسينا وبك أصبحنا، وبك نحيا وبك نموت وإليك المصير.'
+      ]
+    }
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: categories.length,
+      itemBuilder: (context, index) {
+        final cat = categories[index];
+        return Card(
+          margin: const EdgeInsets.only(bottom: 12),
+          child: ExpansionTile(
+            leading: const Icon(Icons.favorite, color: kGold),
+            title: Text(cat['title'] as String, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: (cat['items'] as List<String>).map((item) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12.0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('• ', style: TextStyle(fontSize: 18, color: kGreen, fontWeight: FontWeight.bold)),
+                        Expanded(child: Text(item, style: const TextStyle(fontSize: 15, height: 1.6))),
+                      ],
+                    ),
+                  )).toList(),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class PrayerPage extends StatefulWidget {
   const PrayerPage({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: Text('مواقيت الصلاة'));
+  State<PrayerPage> createState() => _PrayerPageState();
+}
+
+class _PrayerPageState extends State<PrayerPage> {
+  Map<String, dynamic>? timings;
+  bool loading = true;
+  String error = '';
+
+  @override
+  void initState() {
+    super.initState();
+    fetchTimings();
+  }
+
+  Future<void> fetchTimings() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() {
+          error = 'خدمات الموقع (GPS) مغلقة، يرجى تفعيلها';
+          loading = false;
+        });
+        return;
+      }
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() {
+            error = 'تم رفض إذن الوصول للموقع';
+            loading = false;
+          });
+          return;
+        }
+      }
+      Position pos = await Geolocator.getCurrentPosition();
+      final res = await http.get(Uri.parse(
+          'https://api.aladhan.com/v1/timings?latitude=${pos.latitude}&longitude=${pos.longitude}&method=5'));
+      final data = jsonDecode(res.body);
+      setState(() {
+        timings = data['data']['timings'];
+        loading = false;
+      });
+    } catch (_) {
+      setState(() {
+        error = 'تعذر جلب مواقيت الصلاة';
+        loading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) return const Center(child: CircularProgressIndicator());
+    if (error.isNotEmpty) return Msg(error, onRetry: fetchTimings);
+    const prayers = {
+      'Fajr': 'الفجر',
+      'Sunrise': 'الشروق',
+      'Dhuhr': 'الظهر',
+      'Asr': 'العصر',
+      'Maghrib': 'المغرب',
+      'Isha': 'العشاء'
+    };
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        for (final entry in prayers.entries)
+          Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            child: ListTile(
+              leading: const Icon(Icons.access_time_filled, color: kGold),
+              title: Text(entry.value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+              trailing: Text(timings?[entry.key] ?? '', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: kGreen)),
+            ),
+          )
+      ],
+    );
+  }
 }
 
 class HajjPage extends StatelessWidget {
   const HajjPage({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: Text('مناسك الحج والعمرة'));
+  Widget build(BuildContext context) {
+    final steps = [
+      {'title': '1. الإحرام', 'desc': 'النية بالعمرة أو الحج من الميقات والتجرد من المخيط والتلبية.'},
+      {'title': '2. الطواف', 'desc': 'الطواف حول الكعبة المشرفة سبعة أشواط تبدأ من الحجر الأسود وتنتهي به.'},
+      {'title': '3. السعي', 'desc': 'السعي بين الصفا والمروة سبعة أشواط ذهاباً وإياباً.'},
+      {'title': '4. الوقوف بعرفة', 'desc': 'الوقوف بعرفة وهو ركن الحج الأعظم في اليوم التاسع من ذي الحجة.'},
+    ];
+    return ListView.builder(
+      padding: const EdgeInsets.all(16),
+      itemCount: steps.length,
+      itemBuilder: (c, i) => Card(
+        margin: const EdgeInsets.only(bottom: 12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(steps[i]['title']!, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: kGreen)),
+              const SizedBox(height: 8),
+              Text(steps[i]['desc']!, style: const TextStyle(fontSize: 15, height: 1.5)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
-class QiblaPage extends StatelessWidget {
+class QiblaPage extends StatefulWidget {
   const QiblaPage({super.key});
   @override
-  Widget build(BuildContext context) => const Center(child: Text('بوصلة القبلة'));
+  State<QiblaPage> createState() => _QiblaPageState();
+}
+
+class _QiblaPageState extends State<QiblaPage> {
+  final _deviceSupport = FlutterQiblah.androidDeviceSensorSupport();
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder(
+      future: _deviceSupport,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        if (snapshot.hasError) {
+          return Center(child: Text('خطأ في استشعار الحساسات: ${snapshot.error}'));
+        }
+        if (snapshot.hasData && snapshot.data == true) {
+          return StreamBuilder(
+            stream: FlutterQiblah.qiblahStream,
+            builder: (context, AsyncSnapshot<QiblahDirection> snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final qiblah = snapshot.data!;
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text('اتجاه القبلة: ${qiblah.direction.toStringAsFixed(2)}°',
+                        style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 24),
+                    Transform.rotate(
+                      angle: (qiblah.qiblah * (pi / 180) * -1),
+                      child: Image.asset('assets/qiblah_compass.png', height: 250, errorBuilder: (c, e, s) {
+                        return const Icon(Icons.explore, size: 150, color: kGreen);
+                      }),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        } else {
+          return const Center(
+            child: Padding(
+              padding: EdgeInsets.all(24.0),
+              child: Text('جهازك لا يدعم حساس بوصلة القبلة المغناطيسي', textAlign: TextAlign.center, style: TextStyle(fontSize: 16)),
+            ),
+          );
+        }
+      },
+    );
+  }
 }
